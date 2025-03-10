@@ -6,7 +6,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 
-# Database connection
 db = mysql.connector.connect(
     host="localhost",
     user="root",
@@ -60,7 +59,7 @@ def login():
 
         if user:
             session['user'] = email
-            session['user_name'] = user[1]  # Assuming the second column is the username
+            session['user_name'] = user[1]  
             flash('Login Successful!', 'success')
             return redirect('/dashboard')
         else:
@@ -78,12 +77,12 @@ def dashboard():
         user = cursor.fetchone()
         user_info = {'name': user[0], 'email': user[1]}
 
-        # Fetch meetings for the logged-in user
+    
         sql = "SELECT meeting_id, meeting_name, meeting_date, meeting_time, meeting_duration, meeting_description FROM meetings WHERE email = %s"
         cursor.execute(sql, (email,))
         meetings = cursor.fetchall()
 
-        # Check if meetings can be started
+        
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         meeting_list = []
         for meeting in meetings:
@@ -180,6 +179,78 @@ def logout():
     session.pop('user', None)
     flash('You have been logged out.', 'success')
     return redirect(url_for('home'))
+
+@app.route('/reset_password_request', methods=['GET', 'POST'])
+def reset_password_request():
+    if request.method == 'POST':
+        email = request.form['email']
+        sql = "SELECT * FROM users WHERE email = %s"
+        val = (email,)
+        cursor.execute(sql, val)
+        user = cursor.fetchone()
+
+        if user:
+            token = secrets.token_hex(16)
+            expiration = datetime.now() + timedelta(hours=1)
+            sql = "INSERT INTO password_resets (email, token, expiration) VALUES (%s, %s, %s)"
+            val = (email, token, expiration)
+            cursor.execute(sql, val)
+            db.commit()
+
+            reset_url = url_for('reset_password', token=token, _external=True)
+            send_reset_email(email, reset_url)
+            flash('A password reset link has been sent to your email.', 'info')
+        else:
+            flash('Email not found.', 'danger')
+
+    return render_template('reset_password_req.html')
+
+def send_reset_email(email, reset_url):
+    sender_email = "20211460@sbsstc.ac.in"
+    sender_password = "jjud bxmd kckq bwyd"
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = email
+    msg['Subject'] = "Password Reset Request"
+    body = f"Please click the link to reset your password: {reset_url}"
+    msg.attach(MIMEText(body, 'plain'))
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(sender_email, sender_password)
+    text = msg.as_string()
+    server.sendmail(sender_email, email, text)
+    server.quit()
+
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    sql = "SELECT * FROM password_resets WHERE token = %s"
+    val = (token,)
+    cursor.execute(sql, val)
+    reset_request = cursor.fetchone()
+
+    if reset_request and reset_request[2] > datetime.now():
+        if request.method == 'POST':
+            new_password = request.form['password']
+            email = reset_request[0]
+            sql = "UPDATE users SET password = %s WHERE email = %s"
+            val = (new_password, email)
+            cursor.execute(sql, val)
+            db.commit()
+
+            sql = "DELETE FROM password_resets WHERE token = %s"
+            val = (token,)
+            cursor.execute(sql, val)
+            db.commit()
+
+            flash('Your password has been reset successfully.', 'success')
+            return redirect('/login')
+    else:
+        flash('The password reset link is invalid or has expired.', 'danger')
+
+    return render_template('reset_password.html')
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
