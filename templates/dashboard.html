@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 bg-white shadow-lg rounded-lg max-w-4xl relative">
+    <h1 class="text-3xl font-bold mb-6 text-center">Dashboard</h1>
+    {% if logged_in %}
+        <div class="flex justify-center space-x-4 mb-6">
+            <button class="button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="window.location.href='/create_meeting'">Create Meeting</button>
+            <button class="button bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded" onclick="window.location.href='/join_meeting'">Join Meeting</button>
+        </div>
+        <h2 class="text-2xl font-bold mb-4">Your Meetings</h2>
+        <div class="space-y-4">
+            {% for meeting in meetings %}
+                <div class="p-4 bg-gray-100 rounded-lg shadow-md flex justify-between items-center meeting">
+                    <div>
+                        <h3 class="text-xl font-semibold">{{ meeting.meeting_name }}</h3>
+                        <p class="text-gray-600">Date: {{ meeting.meeting_date }}</p>
+                        <p class="text-gray-600">Time: {{ meeting.meeting_time }}</p>
+                        <p class="text-gray-600">Duration: {{ meeting.meeting_duration }} minutes</p>
+                        <p class="text-gray-600">Description: {{ meeting.meeting_description }}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded copyLink" data-link="{{ url_for('meeting_room', meeting_id=meeting.meeting_id, _external=True) }}">Copy Link</button>
+                        {% if meeting.can_start %}
+                            <button class="button bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="window.location.href='/start_meeting/{{ meeting.meeting_id }}'">Start Meeting</button>
+                        {% else %}
+                            <button class="button bg-gray-500 text-white font-bold py-2 px-4 rounded" disabled>Not Yet</button>
+                        {% endif %}
+                        <button class="delete-button text-red-500 hover:text-red-700" onclick="deleteMeeting('{{ meeting.meeting_id }}')"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>Please <a href="{{ url_for('login') }}" class="text-blue-500">login</a> to view your dashboard.</p>
+    {% endif %}
+</div>
+
+<script>
+    document.querySelectorAll('.copyLink').forEach(button => {
+        button.addEventListener('click', () => {
+            const link = button.getAttribute('data-link');
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Meeting link copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy link: ', err);
+            });
+        });
+    });
+
+    function deleteMeeting(meetingId) {
+        if (confirm('Are you sure you want to delete this meeting?')) {
+            fetch(`/delete_meeting/${meetingId}`, {
+                method: 'DELETE',
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete meeting.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to delete meeting.');
+            });
+        }
+    }
+</script>
+{% endblock %}

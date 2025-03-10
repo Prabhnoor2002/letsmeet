@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Login & Signup{% endblock %}
+
+{% block content %}
+<div class="bg-gradient-to-br from-blue-100 to-purple-200 min-h-screen flex items-center justify-center">
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flashes fixed top-20 right-20 z-50">
+        {% for category, message in messages %}
+          <div class="flash {{ category }} p-4 mb-4 rounded-lg text-white flex justify-between items-center">
+            <span>{{ message }}</span>
+            <span class="close ml-4 cursor-pointer" onclick="this.parentElement.style.display='none';">&times;</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  
+  <div class="bg-white shadow-xl rounded-2xl p-8 max-w-md w-full">
+    <div class="flex justify-between mb-6">
+      <button id="loginTab" class="w-1/2 py-2 text-center text-lg font-semibold rounded-l-xl bg-blue-600 text-white">Login</button>
+      <button id="signupTab" class="w-1/2 py-2 text-center text-lg font-semibold rounded-r-xl bg-gray-200">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="space-y-4" method="POST" action="/login">
+      <input type="email" name="email" placeholder="Email" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <input type="password" name="password" placeholder="Password" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400">
+      <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition">Login</button>
+      <p class="text-center text-sm mt-2">Forgot password? <a href="/reset_password_request" class="text-blue-600 font-semibold">Reset</a></p>
+    </form>
+
+    <!-- Signup Form -->
+    <form id="signupForm" class="space-y-4 hidden" method="POST" action="/signup">
+      <input type="text" name="username" placeholder="Full Name" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+      <input type="email" name="email" placeholder="Email" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+      <input type="password" name="password" placeholder="Password" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-400">
+      <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 transition">Sign Up</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const loginTab = document.getElementById('loginTab');
+  const signupTab = document.getElementById('signupTab');
+  const loginForm = document.getElementById('loginForm');
+  const signupForm = document.getElementById('signupForm');
+
+  loginTab.onclick = () => {
+    loginTab.classList.add('bg-blue-600', 'text-white');
+    signupTab.classList.remove('bg-purple-600', 'text-white');
+    signupTab.classList.add('bg-gray-200', 'text-black');
+    loginForm.classList.remove('hidden');
+    signupForm.classList.add('hidden');
+  };
+
+  signupTab.onclick = () => {
+    signupTab.classList.add('bg-purple-600', 'text-white');
+    loginTab.classList.remove('bg-blue-600', 'text-white');
+    loginTab.classList.add('bg-gray-200', 'text-black');
+    signupForm.classList.remove('hidden');
+    loginForm.classList.add('hidden');
+  };
+
+  // Automatically hide flash messages after 5 seconds
+  setTimeout(() => {
+    const flashes = document.querySelectorAll('.flash');
+    flashes.forEach(flash => {
+      flash.style.display = 'none';
+    });
+  }, 5000);
+</script>
+{% endblock %}

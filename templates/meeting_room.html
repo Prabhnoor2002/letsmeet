@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Room</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+        button {
+            background-color: #1d4ed8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #2563eb;
+        }
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <video id="localVideo" autoplay playsinline></video>
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="controls">
+            <button id="startCall">Start Call</button>
+            <button id="endCall" disabled>End Call</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+        const room = "{{ meeting_id }}";
+        let localStream, peerConnection;
+        const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        document.getElementById('startCall').addEventListener('click', async () => {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+
+                socket.emit('join', { room });
+
+                peerConnection = new RTCPeerConnection(servers);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.ontrack = event => {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                };
+
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        socket.emit('ice_candidate', { candidate: event.candidate, room });
+                    }
+                };
+
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                socket.emit('offer', { sdp: offer, room });
+
+                document.getElementById('startCall').disabled = true;
+                document.getElementById('endCall').disabled = false;
+            } catch (error) {
+                console.error('Error accessing media devices.', error);
+            }
+        });
+
+        socket.on('offer', async data => {
+            if (!peerConnection) {
+                peerConnection = new RTCPeerConnection(servers);
+                peerConnection.ontrack = event => {
+                    document.getElementById('remoteVideo').srcObject = event.streams[0];
+                };
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        socket.emit('ice_candidate', { candidate: event.candidate, room });
+                    }
+                };
+
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            }
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.emit('answer', { sdp: answer, room });
+        });
+
+        socket.on('answer', data => {
+            peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        });
+
+        socket.on('ice_candidate', data => {
+            peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+        });
+
+        document.getElementById('endCall').addEventListener('click', () => {
+            localStream.getTracks().forEach(track => track.stop());
+            if (peerConnection) {
+                peerConnection.close();
+            }
+            socket.emit('leave', { room });
+
+            document.getElementById('startCall').disabled = false;
+            document.getElementById('endCall').disabled = true;
+        });
+    </script>
+</body>
+</html>
