@@ -1,23 +1,38 @@
-from flask import Flask, render_template, request, redirect, flash, session, url_for
+from flask import Flask, render_template, request, redirect, session, flash,url_for
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime,timedelta
+from email.mime.text import MIMEText
 import mysql.connector
 import secrets
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
+import os
 
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="",
-    database="videomeet"
-)
-cursor = db.cursor()
 app = Flask(__name__)
+def get_secret_key():
+    return 'your_secret_key'
 
-def generate_secret_key():
-    return secrets.token_hex(16)
-app.secret_key = generate_secret_key()
+app = Flask(__name__)
+app.secret_key = get_secret_key()
+
+
+USE_DEPLOYED_DB = os.getenv("USE_DEPLOYED_DB", "false").lower() == "true"
+
+if USE_DEPLOYED_DB:
+    db = mysql.connector.connect(
+        host=os.getenv("DEPLOYED_DB_HOST"),
+        user=os.getenv("DEPLOYED_DB_USER"),
+        password=os.getenv("DEPLOYED_DB_PASS"),
+        database=os.getenv("DEPLOYED_DB_NAME")
+    )
+else:
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="videomeet"
+    )
+
+cursor = db.cursor()
 
 @app.route('/')
 def home():
