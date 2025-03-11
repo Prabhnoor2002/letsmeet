@@ -213,13 +213,13 @@ def reset_password_request():
             db.commit()
 
             reset_url = url_for('reset_password', token=token, _external=True)
+            print(f"Sending reset email to {email} with URL: {reset_url}")  # Debugging statement
             send_reset_email(email, reset_url)
             flash('A password reset link has been sent to your email.', 'info')
         else:
             flash('Email not found.', 'danger')
 
     return render_template('reset_password_req.html')
-
 def send_reset_email(email, reset_url):
     sender_email = "20211460@sbsstc.ac.in"
     sender_password = "jjud bxmd kckq bwyd"
