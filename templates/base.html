@@ -1,3 +1,4 @@
+<!-- filepath: c:\Users\Dell\OneDrive\Desktop\videomeet\templates\base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,8 +86,31 @@
             {% endif %}
         </div>
     </div>
+    <div class="container mx-auto mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flashes fixed top-20 right-20 z-50">
+                    {% for category, message in messages %}
+                        <div class="flash p-4 mb-4 rounded-lg text-white flex justify-between items-center {% if category == 'success' %}bg-green-500{% elif category == 'danger' %}bg-red-500{% elif category == 'warning' %}bg-yellow-500{% elif category == 'info' %}bg-blue-500{% endif %}">
+                            <span>{{ message }}</span>
+                            <span class="close ml-4 cursor-pointer" onclick="this.parentElement.style.display='none';">&times;</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
     <div class="content">
         {% block content %}{% endblock %}
     </div>
+    <script>
+        // Automatically hide flash messages after 5 seconds
+        setTimeout(() => {
+            const flashes = document.querySelectorAll('.flash');
+            flashes.forEach(flash => {
+                flash.style.display = 'none';
+            });
+        }, 5000);
+    </script>
 </body>
 </html>
